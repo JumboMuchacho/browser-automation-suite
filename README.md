@@ -1,5 +1,6 @@
 # Browser-automation-suite
 Production-ready browser automation and monitoring tools, featuring Popup Detector as the primary application with archived project evolution.
+++ Precomipiled production grade exe in Releases.
 
 ## 📂 Project Structure
 
