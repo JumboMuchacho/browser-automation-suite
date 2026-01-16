@@ -5,6 +5,14 @@ Production-ready browser automation and monitoring tools, featuring Popup Detect
 This repository contains the production-ready Popup Detector application
 and archived legacy prototypes for reference.
 
+popup-detector/
+├── main/                  # Active app
+├── archived/
+│   ├── poptest/
+│   ├── autobot/
+│   └── automania/
+
+
 - `popup-detector/` – Active, maintained source code
 - `archived/` – Legacy prototypes (read-only)
 - Releases – Precompiled executables for production use
