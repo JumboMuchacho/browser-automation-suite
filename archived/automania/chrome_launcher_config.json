@@ -1,0 +1,26 @@
+{
+  "chrome": {
+    "default_port": 9222,
+    "max_port_tries": 20,
+    "startup_timeout": 30,
+    "health_check_interval": 5,
+    "max_health_check_attempts": 6
+  },
+  "profiles": {
+    "max_profile_search": 10,
+    "preferred_profiles": [
+      "Default",
+      "Profile 1",
+      "Profile 2"
+    ]
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(levelname)s - %(message)s"
+  },
+  "fallbacks": {
+    "enable_auto_chromedriver_update": true,
+    "enable_port_scanning": true,
+    "enable_profile_fallback": true
+  }
+}

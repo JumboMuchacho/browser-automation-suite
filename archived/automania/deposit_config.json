@@ -1,0 +1,40 @@
+{
+  "chrome": {
+    "connection_timeout": 30,
+    "page_load_timeout": 30,
+    "implicit_wait": 10,
+    "max_retries": 3,
+    "retry_delay": 2
+  },
+  "deposit": {
+    "default_amount": "50",
+    "default_network": "bnb",
+    "amount_input_delay": 1,
+    "confirmation_delay": 2
+  },
+  "telegram": {
+    "enabled": true,
+    "timeout": 10,
+    "max_retries": 3
+  },
+  "audio": {
+    "enabled": true,
+    "volume": 0.8
+  },
+  "screenshots": {
+    "enabled": true,
+    "format": "png",
+    "quality": 85
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(levelname)s - %(message)s",
+    "file": "deposit_automation.log"
+  },
+  "fallbacks": {
+    "enable_profile_copy": true,
+    "enable_port_detection": true,
+    "enable_audio_fallback": true,
+    "enable_screenshot_fallback": true
+  }
+}

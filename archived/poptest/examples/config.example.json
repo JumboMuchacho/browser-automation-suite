@@ -1,0 +1,35 @@
+{
+  "bot_token": "PASTE_YOUR_TELEGRAM_BOT_TOKEN_HERE",
+  "chat_id": "PASTE_YOUR_TELEGRAM_CHAT_ID_HERE",
+  "check_interval": 5,
+  "throttle_minutes": 5,
+  "max_retries": 3,
+  "retry_delay": 5,
+  "alarm_sound": "alarm_sounds/carrousel.wav",
+  "window_check_period": 60,
+  "refresh_enabled": false,
+  "refresh_interval_minutes": 10,
+  "start_url": "https://www.gamemania.co.ke/login?isBack=1",
+  "popup_selectors": [
+    {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.message"},
+    {"type": "css", "value": ".bsbb.modifyAvatarBox"}
+  ],
+  "try_again_selectors": [
+    {"type": "xpath", "value": "//div[contains(text(), 'Try Again Later')]"}
+  ],
+  "preferred_network": "BNB Smart Chain(BEP20)",
+  "text_extraction": {
+    "enabled": true,
+    "extract_full_text": true,
+    "extract_deposit_address": true,
+    "extraction_method": "precise_text_parsing",
+    "search_phrases": ["There is no USDT transaction received..."],
+    "deposit_address_pattern": "deposit address is\\s*([A-Za-z0-9]+)"
+  },
+  "process_steps": {
+    "popup_detection": {"enabled": true, "timeout": 5},
+    "screenshot": {"enabled": true, "format": "png"},
+    "telegram_notification": {"enabled": true, "include_screenshot": true},
+    "alarm_sound": {"enabled": true, "volume": 0.8}
+  }
+}

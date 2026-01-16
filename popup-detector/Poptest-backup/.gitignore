@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.env/
+venv/
+.env.bak/
+
+# Build outputs
+build/
+dist/
+
+# Browser & automation
+chrome/
+chromedriver/
+chrome_profile/
+profiles/
+
+# Logs
+*.log
+
+# OS junk
+Thumbs.db
+.DS_Store

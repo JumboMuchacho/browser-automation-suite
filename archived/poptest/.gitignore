@@ -1,0 +1,21 @@
+# Environments
+venv/
+.env
+
+# Chrome / Drivers
+automation_profile/
+chromendriver/
+
+# Logs & Python
+*.log
+popup_log.txt
+__pycache__/
+*.pyc
+.DS_Store
+
+# Sensitive Config
+config.json
+
+# Chrome binaries
+chromendriver/**/*.exe
+!chromendriver/**/.gitkeep
