@@ -1,0 +1,19 @@
+{
+  "bot_token": "8077567214:AAFaNw-KlMK4fJ36rny_TCjdtEj6P0ffSlE",
+  "chat_id": "814781807",
+  "start_url": "https://www.gamemania.co.ke/login?isBack=1",
+  "popup_selectors": [
+    {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.message"},
+    {"type": "xpath", "value": "//*[@id=\"app\"]/div[2]/div/div[2]/div[2]"},
+    {"type": "css", "value": ".bsbb.modifyAvatarBox"}
+  ],
+  "alarm_sound": "alarm_sounds/carrousel.wav",
+  "refresh_interval_seconds": 600,
+  "check_interval": 5,
+  "throttle_minutes": 5,
+  "text_extraction": {
+    "enabled": true,
+    "extract_deposit_address": true,
+    "deposit_address_pattern": "deposit address is\\s*([A-Za-z0-9]+)"
+  }
+}

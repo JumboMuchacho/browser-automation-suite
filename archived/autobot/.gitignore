@@ -1,0 +1,8 @@
+venv/
+automation_profile/
+*.log
+chromendriver/chrome-win64/
+chromendriver/chromedriver-win64/
+__pycache__/
+*.pyc
+.DS_Store 
