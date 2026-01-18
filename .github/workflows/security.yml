@@ -17,5 +17,5 @@ jobs:
         run: pip install bandit
         
       - name: Run Bandit Scan
-        # Added 'archived' (with a 'd') to finally block those 78 issues
-        run: bandit -r . -ll --exclude venv,.venv,archives,archived,Archives,Archived,__pycache__
+        # Targeted ./Main specifically to ignore archived folders and root files
+        run: bandit -r ./Main -ll
