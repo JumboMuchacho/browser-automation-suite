@@ -9,4 +9,5 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install bandit
-      - run: bandit -r . -ll -ii
+      # Added exclude flag to ignore archived code and virtual environments
+      - run: bandit -r . -ll --exclude ./venv,./.venv,./archives,./__pycache__
