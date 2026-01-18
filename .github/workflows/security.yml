@@ -1,13 +1,22 @@
 name: Python Security Scan
+
 on: [push, pull_request]
+
 jobs:
   bandit-scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install bandit
-      # Added exclude flag to ignore archived code and virtual environments
-      - run: bandit -r . -ll --exclude ./venv,./.venv,./archives,./__pycache__
+          
+      - name: Install Bandit
+        run: pip install bandit
+        
+      - name: Run Bandit Scan
+        # We exclude venv and archives by name to clear the 78 issues found in those folders
+        # -ll ignores Low severity findings (like the #nosec lines in main.py)
+        run: bandit -r . -ll --exclude venv,.venv,archives,__pycache__
