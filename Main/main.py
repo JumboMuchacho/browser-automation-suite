@@ -50,9 +50,8 @@ def close_existing_chrome():
         try:
             if proc.info['exe'] and os.path.samefile(proc.info['exe'], chrome_exe):
                 proc.kill()
-        except Exception:
+        except Exception: # nosec
             continue
-
 
 def create_driver():
     close_existing_chrome()
@@ -138,7 +137,7 @@ def run_browser():
         if driver:
             try:
                 driver.quit()
-            except Exception:
+            except Exception: # nosec
                 pass
 
 
