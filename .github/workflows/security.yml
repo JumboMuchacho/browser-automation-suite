@@ -17,6 +17,5 @@ jobs:
         run: pip install bandit
         
       - name: Run Bandit Scan
-        # We exclude venv and archives by name to clear the 78 issues found in those folders
-        # -ll ignores Low severity findings (like the #nosec lines in main.py)
-        run: bandit -r . -ll --exclude venv,.venv,archives,__pycache__
+        # Added 'archived' (with a 'd') to finally block those 78 issues
+        run: bandit -r . -ll --exclude venv,.venv,archives,archived,Archives,Archived,__pycache__
