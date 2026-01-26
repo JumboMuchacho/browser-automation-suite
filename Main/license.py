@@ -1,118 +1,68 @@
+import time
 import json
 import os
-import time
-import sys
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Optional
+import hmac
+import hashlib
+import requests
 
-from client import make_fingerprint, verify_license, activate_license
+CACHE = ".license_token.json"
+SECRET = b"CHANGE_ME_NOW"
+CLIENT_VERSION = "1.0.0"
 
-APP_NAME = "popup-detector"
+def verify_sig(payload, sig):
+    raw = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    expected = hmac.new(SECRET, raw.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig)
 
+def ensure_valid(server, license_key, device_id, offline_days=2, recheck_hours=1):
+    """Check license validity with offline grace and HMAC"""
+    now = int(time.time())
+    cached = None
 
-def get_config_path(app_dir: Optional[str] = None) -> Path:
-    """Return path to license.json (portable & cross-platform)."""
-    if app_dir:
-        p = Path(app_dir) / "license.json"
-    elif getattr(sys, "frozen", False):
-        exe_dir = Path(sys._MEIPASS if hasattr(sys, "_MEIPASS") else os.path.dirname(sys.executable))
-        config_dir = exe_dir / "config"
-        config_dir.mkdir(parents=True, exist_ok=True)
-        p = config_dir / "license.json"
-    else:
-        if os.name == "nt":
-            appdata = os.getenv("APPDATA") or str(Path.home())
-            config_dir = Path(appdata) / APP_NAME
-        else:
-            xdg = os.getenv("XDG_CONFIG_HOME") or str(Path.home() / ".config")
-            config_dir = Path(xdg) / APP_NAME
-        config_dir.mkdir(parents=True, exist_ok=True)
-        p = config_dir / "license.json"
+    # Try reading cached token
+    if os.path.exists(CACHE):
+        with open(CACHE, "r") as f:
+            try:
+                cached = json.load(f)
+            except Exception:
+                cached = None
 
-    p.parent.mkdir(parents=True, exist_ok=True)
-    return p
+    # Decide if we need a server check
+    last_check = cached.get("last_check", 0) if cached else 0
+    need_server = (now - last_check) > recheck_hours * 3600
 
-
-def save_license(license_key: str, app_dir: Optional[str] = None) -> None:
-    cfg = {"license_key": license_key, "last_check": None}
-    p = get_config_path(app_dir)
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(cfg, f)
-
-
-def load_license(app_dir: Optional[str] = None) -> Optional[dict]:
-    p = get_config_path(app_dir)
-    if not p.exists():
-        return None
-    try:
-        with open(p, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return None
-
-
-def update_last_check(app_dir: Optional[str] = None) -> None:
-    data = load_license(app_dir) or {}
-    data["last_check"] = time.time()
-    p = get_config_path(app_dir)
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f)
-
-
-def prompt_for_license() -> str:
-    return input("Enter license key: ").strip()
-
-
-def ensure_valid(
-    server: str,
-    app_dir: Optional[str] = None,
-    recheck_hours: int = 1,
-    offline_days: int = 2,
-) -> bool:
-    data = load_license(app_dir)
-    if data and "license_key" in data:
-        license_key = data["license_key"]
-    else:
-        license_key = prompt_for_license()
-        save_license(license_key, app_dir)
-        data = load_license(app_dir)
-
-    fingerprint = make_fingerprint()
-    now = time.time()
-    last_check = data.get("last_check") if data else None
-
-    if last_check and (now - last_check) / 3600.0 < recheck_hours:
-        return True
-
-    ok, status, text = verify_license(server, license_key, fingerprint)
-    if ok:
-        update_last_check(app_dir)
-        return True
-
-    if status == 403:
-        activate_ok, _, _ = activate_license(server, license_key, fingerprint)
-        if activate_ok:
-            ok, status, text = verify_license(server, license_key, fingerprint)
-            if ok:
-                update_last_check(app_dir)
-                return True
-
-    max_attempts = 3
-    print(f"License invalid: {text}. You have {max_attempts} attempts to enter a new key.")
-
-    for attempt in range(max_attempts):
-        new_key = prompt_for_license()
-        save_license(new_key, app_dir)
-        fingerprint = make_fingerprint()
-        ok2, status2, text2 = verify_license(server, new_key, fingerprint)
-        if not ok2 and status2 == 403:
-            activate_ok, _, _ = activate_license(server, new_key, fingerprint)
-            if activate_ok:
-                ok2, status2, text2 = verify_license(server, new_key, fingerprint)
-        if ok2:
-            update_last_check(app_dir)
+    if need_server:
+        try:
+            r = requests.post(
+                f"{server}/verify",
+                json={
+                    "license_key": license_key,
+                    "device_id": device_id,
+                    "client_version": CLIENT_VERSION,
+                },
+                timeout=5,
+            )
+            if r.status_code != 200:
+                raise Exception("Server rejected license")
+            data = r.json()
+            data["last_check"] = now
+            with open(CACHE, "w") as f:
+                json.dump(data, f)
             return True
-        print("License still invalid:", text2)
+
+        except Exception:
+            # If server unavailable, fallback to cached
+            pass
+
+    # Offline verification
+    if cached:
+        token = cached.get("token")
+        sig = cached.get("signature")
+        if token and sig and verify_sig(token, sig):
+            if token.get("device") != device_id:
+                return False
+            # Allow offline grace period
+            if token.get("exp", 0) + offline_days * 86400 >= now:
+                return True
 
     return False
