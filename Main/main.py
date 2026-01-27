@@ -2,6 +2,11 @@ import os
 import sys
 import time
 import psutil
+from dotenv import load_dotenv
+
+# Load .env for license info
+load_dotenv()
+
 from license import ensure_valid, make_fingerprint
 
 from selenium import webdriver
@@ -16,6 +21,25 @@ def resource_path(relative_path):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
+# -------------------------------
+# LICENSE CHECK
+# -------------------------------
+LICENSE_SERVER = os.getenv("LICENSE_SERVER_URL")
+LICENSE_KEY = os.getenv("LICENSE_KEY")
+
+if not LICENSE_SERVER or not LICENSE_KEY:
+    print("LICENSE_SERVER_URL or LICENSE_KEY not set in .env. Exiting.")
+    sys.exit(1)
+
+if not ensure_valid(LICENSE_SERVER, LICENSE_KEY):
+    print("License invalid or not usable. Exiting.")
+    sys.exit(1)
+
+print("License valid. Starting application...")
+
+# -------------------------------
+# Browser functions
+# -------------------------------
 def detect_popup(driver, selectors):
     for sel in selectors:
         try:
@@ -75,11 +99,21 @@ def create_driver():
     return driver
 
 def run_browser():
+    # -------------------------------
+    # Combined popup selectors (old + new)
+    # -------------------------------
     selectors = [
+        # Old selectors
         {"type": "css", "value": ".popup"},
         {"type": "xpath", "value": "//div[contains(@class, 'modal')]"},
         {"type": "xpath", "value": "//*[@id='app']/div[4]/div[2]/div[1]/div[2]/div/div[3]"},
+
+        # New selectors
+        {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.message"},
+        {"type": "xpath", "value": "//*[@id=\"app\"]/div[2]/div/div[2]/div[2]"},
+        {"type": "css", "value": ".bsbb.modifyAvatarBox"},
     ]
+
     alarm_file = resource_path(os.path.join("alarm_sounds", "carrousel.wav"))
 
     driver = None
@@ -109,13 +143,14 @@ def run_browser():
             except Exception:
                 pass
 
-def main():
-    license_server = os.getenv("LICENSE_SERVER_URL", "https://your-new-server.example.com")
-    if not ensure_valid(license_server):
-        print("License invalid or not usable. Exiting.")
-        sys.exit(1)
 
+# -------------------------------
+# MAIN
+# -------------------------------
+def main():
     run_browser()
+
 
 if __name__ == "__main__":
     main()
+
