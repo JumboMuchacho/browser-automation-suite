@@ -4,65 +4,129 @@ import os
 import hmac
 import hashlib
 import requests
+import platform
+import uuid
+from dotenv import load_dotenv
+
+# Load LICENSE_SECRET from .env
+load_dotenv()
+SECRET = os.getenv("LICENSE_SECRET")
+if not SECRET:
+    raise RuntimeError("LICENSE_SECRET not set in .env or environment variables")
+SECRET = SECRET.encode()  # convert to bytes for HMAC
 
 CACHE = ".license_token.json"
-SECRET = b"CHANGE_ME_NOW"
-CLIENT_VERSION = "1.0.0"
+OFFLINE_GRACE_DAYS = 2  # Grace period if offline
+
+
+# ------------------------------
+# Hardware fingerprint
+# ------------------------------
+def get_cpu_id():
+    if platform.system() == "Windows":
+        try:
+            import subprocess
+            out = subprocess.check_output("wmic cpu get ProcessorId", shell=True, text=True)
+            for line in out.splitlines():
+                line = line.strip()
+                if line and line.lower() != "processorid":
+                    return line
+        except Exception:
+            pass
+    return platform.processor() or ""
+
+
+def get_disk_serial():
+    if platform.system() == "Windows":
+        try:
+            import subprocess
+            out = subprocess.check_output("wmic diskdrive get SerialNumber", shell=True, text=True)
+            for line in out.splitlines():
+                line = line.strip()
+                if line and not line.lower().startswith("serialnumber"):
+                    return line
+        except Exception:
+            pass
+    return ""
+
+
+def get_mac():
+    node = uuid.getnode()
+    return ":".join([f"{(node >> ele) & 0xFF:02x}" for ele in range(0, 8 * 6, 8)][::-1])
+
+
+def make_fingerprint():
+    cpu = get_cpu_id()
+    disk = get_disk_serial()
+    mac = get_mac()
+    seed = "|".join([cpu, disk, mac])
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()
+
+
+# ------------------------------
+# Signature verification
+# ------------------------------
+def _canonical_json(payload):
+    """Produce deterministic JSON for HMAC"""
+    return json.dumps(payload, separators=(",", ":"), sort_keys=True)
+
 
 def verify_sig(payload, sig):
-    raw = json.dumps(payload, separators=(",", ":"), sort_keys=True)
-    expected = hmac.new(SECRET, raw.encode(), hashlib.sha256).hexdigest()
+    raw = _canonical_json(payload).encode()
+    expected = hmac.new(SECRET, raw, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, sig)
 
-def ensure_valid(server, license_key, device_id, offline_days=2, recheck_hours=1):
-    """Check license validity with offline grace and HMAC"""
+
+# ------------------------------
+# License validation
+# ------------------------------
+def ensure_valid(server_url, license_key=None):
+    device_id = make_fingerprint()
     now = int(time.time())
-    cached = None
 
-    # Try reading cached token
-    if os.path.exists(CACHE):
-        with open(CACHE, "r") as f:
-            try:
-                cached = json.load(f)
-            except Exception:
-                cached = None
+    # Prompt license if not provided
+    if not license_key:
+        license_key = input("Enter your license key: ").strip()
 
-    # Decide if we need a server check
-    last_check = cached.get("last_check", 0) if cached else 0
-    need_server = (now - last_check) > recheck_hours * 3600
+    # Attempt server verification
+    try:
+        r = requests.post(
+            f"{server_url.rstrip('/')}/verify",
+            json={"license_key": license_key, "device_id": device_id},
+            timeout=5
+        )
+        if r.status_code != 200:
+            print(f"Server verification failed: {r.status_code} {r.text}")
+            raise Exception("Server rejected license")
 
-    if need_server:
-        try:
-            r = requests.post(
-                f"{server}/verify",
-                json={
-                    "license_key": license_key,
-                    "device_id": device_id,
-                    "client_version": CLIENT_VERSION,
-                },
-                timeout=5,
-            )
-            if r.status_code != 200:
-                raise Exception("Server rejected license")
-            data = r.json()
-            data["last_check"] = now
-            with open(CACHE, "w") as f:
-                json.dump(data, f)
-            return True
+        data = r.json()
+        # Save cached token locally
+        with open(CACHE, "w") as f:
+            json.dump(data, f)
+        return True
 
-        except Exception:
-            # If server unavailable, fallback to cached
-            pass
+    except Exception:
+        # Offline handling
+        if not os.path.exists(CACHE):
+            print("No cached license found and server unreachable.")
+            return False
 
-    # Offline verification
-    if cached:
-        token = cached.get("token")
-        sig = cached.get("signature")
-        if token and sig and verify_sig(token, sig):
-            if token.get("device") != device_id:
-                return False
-            # Allow offline grace period
-            if token.get("exp", 0) + offline_days * 86400 >= now:
-                return True
+        with open(CACHE) as f:
+            data = json.load(f)
 
-    return False
+        token = data.get("token")
+        sig = data.get("signature")
+        if not token or not sig or not verify_sig(token, sig):
+            print("Cached token invalid or tampered.")
+            return False
+
+        if token.get("device") != device_id:
+            print("License not valid for this device.")
+            return False
+
+        if token.get("exp", 0) < now and now - token.get("exp", 0) > OFFLINE_GRACE_DAYS * 86400:
+            print("Offline grace expired.")
+            return False
+
+        print("Using offline cached license.")
+        return True

@@ -1,16 +1,16 @@
 import os
 import sys
 import time
-
-from license import ensure_valid
+import psutil
+from license import ensure_valid, make_fingerprint
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
-import psutil
 
+# ---------- PYINSTALLER SAFE PATH ----------
 def resource_path(relative_path):
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative_path)
@@ -56,10 +56,8 @@ def create_driver():
     profile_dir = os.path.join(os.path.expanduser("~"), ".popup_detector_profile")
     os.makedirs(profile_dir, exist_ok=True)
 
-    if not os.path.exists(chrome_path):
-        raise FileNotFoundError(f"Chrome not found: {chrome_path}")
-    if not os.path.exists(chromedriver_path):
-        raise FileNotFoundError(f"ChromeDriver not found: {chromedriver_path}")
+    if not os.path.exists(chrome_path) or not os.path.exists(chromedriver_path):
+        raise FileNotFoundError("Chrome or ChromeDriver not found.")
 
     options = Options()
     options.binary_location = chrome_path
@@ -81,17 +79,15 @@ def run_browser():
         {"type": "css", "value": ".popup"},
         {"type": "xpath", "value": "//div[contains(@class, 'modal')]"},
         {"type": "xpath", "value": "//*[@id='app']/div[4]/div[2]/div[1]/div[2]/div/div[3]"},
-        {"type": "css", "value": "#app > div.reviseAvatar-wrap > div.gmRA > div.drawer-wrap.drawer-middle > div.drawer-box > div > div.bsbb.modifyAvatarBox"},
-        {"type": "xpath", "value": "//div[contains(@class, 'normal')][.//div[contains(@class, 'title') and contains(text(), 'Verify Completed')]]"},
     ]
-
     alarm_file = resource_path(os.path.join("alarm_sounds", "carrousel.wav"))
 
     driver = None
     try:
         print("Launching Chrome...")
         driver = create_driver()
-        print("===== Hi, welcome to POPTEST Free Trial =====")
+        print("Monitoring for popups... Press CTRL+C to stop.")
+
         while True:
             try:
                 for handle in driver.window_handles:
@@ -101,8 +97,9 @@ def run_browser():
                         play_alarm(alarm_file)
                 time.sleep(30)
             except WebDriverException:
-                print("Browser session ended. Exiting cleanly.")
+                print("Browser session ended.")
                 break
+
     except KeyboardInterrupt:
         print("User stopped the script.")
     finally:
@@ -113,36 +110,8 @@ def run_browser():
                 pass
 
 def main():
-    license_server = os.getenv(
-        "LICENSE_SERVER_URL",
-        "https://license-server-production-c88f.up.railway.app",
-    )
-
-    # Collect device ID (fingerprint)
-    import uuid, platform, hashlib
-    def make_fingerprint():
-        node = uuid.getnode()
-        mac = ":".join([f"{(node >> ele) & 0xFF:02x}" for ele in range(0, 8*6, 8)][::-1])
-        cpu = platform.processor() or ""
-        disk = ""
-        if platform.system() == "Windows":
-            try:
-                import subprocess
-                disk = subprocess.check_output("wmic diskdrive get SerialNumber", shell=True, text=True)
-                for line in disk.splitlines():
-                    line = line.strip()
-                    if line and not line.lower().startswith("serialnumber"):
-                        disk = line
-                        break
-            except Exception:
-                disk = ""
-        seed = "|".join([cpu, disk, mac])
-        return hashlib.sha256(seed.encode("utf-8")).hexdigest()
-
-    device_id = make_fingerprint()
-    license_key = os.getenv("LICENSE_KEY", "YOUR_LICENSE_KEY_HERE")
-
-    if not ensure_valid(license_server, license_key, device_id, offline_days=2, recheck_hours=1):
+    license_server = os.getenv("LICENSE_SERVER_URL", "https://your-new-server.example.com")
+    if not ensure_valid(license_server):
         print("License invalid or not usable. Exiting.")
         sys.exit(1)
 
