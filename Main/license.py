@@ -1,6 +1,5 @@
-import time
-import json
 import os
+import json
 import hmac
 import hashlib
 import requests
@@ -13,10 +12,7 @@ load_dotenv()
 SECRET = os.getenv("LICENSE_SECRET")
 if not SECRET:
     raise RuntimeError("LICENSE_SECRET not set in .env or environment variables")
-SECRET = SECRET.encode()  # convert to bytes for HMAC
-
-CACHE = ".license_token.json"
-OFFLINE_GRACE_DAYS = 2  # Grace period if offline
+SECRET = SECRET.encode()  # for HMAC
 
 
 # ------------------------------
@@ -67,7 +63,6 @@ def make_fingerprint():
 # Signature verification
 # ------------------------------
 def _canonical_json(payload):
-    """Produce deterministic JSON for HMAC"""
     return json.dumps(payload, separators=(",", ":"), sort_keys=True)
 
 
@@ -78,55 +73,29 @@ def verify_sig(payload, sig):
 
 
 # ------------------------------
-# License validation
+# License validation (ONLINE ONLY)
 # ------------------------------
 def ensure_valid(server_url, license_key=None):
     device_id = make_fingerprint()
-    now = int(time.time())
 
-    # Prompt license if not provided
     if not license_key:
         license_key = input("Enter your license key: ").strip()
 
-    # Attempt server verification
-    try:
-        r = requests.post(
-            f"{server_url.rstrip('/')}/verify",
-            json={"license_key": license_key, "device_id": device_id},
-            timeout=5
-        )
-        if r.status_code != 200:
-            print(f"Server verification failed: {r.status_code} {r.text}")
-            raise Exception("Server rejected license")
+    # Always try server verification
+    r = requests.post(
+        f"{server_url.rstrip('/')}/verify",
+        json={"license_key": license_key, "device_id": device_id},
+        timeout=5
+    )
+    if r.status_code != 200:
+        print(f"Server verification failed: {r.status_code} {r.text}")
+        return False
 
-        data = r.json()
-        # Save cached token locally
-        with open(CACHE, "w") as f:
-            json.dump(data, f)
-        return True
+    data = r.json()
+    token = data.get("token")
+    sig = data.get("signature")
+    if not token or not sig or not verify_sig(token, sig):
+        print("Server returned invalid signature.")
+        return False
 
-    except Exception:
-        # Offline handling
-        if not os.path.exists(CACHE):
-            print("No cached license found and server unreachable.")
-            return False
-
-        with open(CACHE) as f:
-            data = json.load(f)
-
-        token = data.get("token")
-        sig = data.get("signature")
-        if not token or not sig or not verify_sig(token, sig):
-            print("Cached token invalid or tampered.")
-            return False
-
-        if token.get("device") != device_id:
-            print("License not valid for this device.")
-            return False
-
-        if token.get("exp", 0) < now and now - token.get("exp", 0) > OFFLINE_GRACE_DAYS * 86400:
-            print("Offline grace expired.")
-            return False
-
-        print("Using offline cached license.")
-        return True
+    return True

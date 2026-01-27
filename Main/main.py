@@ -22,18 +22,22 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 # -------------------------------
-# LICENSE CHECK
+# LICENSE CHECK (ONLINE ONLY)
 # -------------------------------
 LICENSE_SERVER = os.getenv("LICENSE_SERVER_URL")
 LICENSE_KEY = os.getenv("LICENSE_KEY")
 
-if not LICENSE_SERVER or not LICENSE_KEY:
-    print("LICENSE_SERVER_URL or LICENSE_KEY not set in .env. Exiting.")
+if not LICENSE_SERVER:
+    print("LICENSE_SERVER_URL not set in .env. Exiting.")
     sys.exit(1)
 
-if not ensure_valid(LICENSE_SERVER, LICENSE_KEY):
-    print("License invalid or not usable. Exiting.")
-    sys.exit(1)
+# Retry loop for license validation
+valid = False
+while not valid:
+    valid = ensure_valid(LICENSE_SERVER, LICENSE_KEY)
+    if not valid:
+        print("License invalid. Please enter a valid license key.")
+        LICENSE_KEY = input("License key: ").strip()
 
 print("License valid. Starting application...")
 
@@ -107,7 +111,6 @@ def run_browser():
         {"type": "css", "value": ".popup"},
         {"type": "xpath", "value": "//div[contains(@class, 'modal')]"},
         {"type": "xpath", "value": "//*[@id='app']/div[4]/div[2]/div[1]/div[2]/div/div[3]"},
-
         # New selectors
         {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.message"},
         {"type": "xpath", "value": "//*[@id=\"app\"]/div[2]/div/div[2]/div[2]"},
@@ -143,14 +146,11 @@ def run_browser():
             except Exception:
                 pass
 
-
 # -------------------------------
 # MAIN
 # -------------------------------
 def main():
     run_browser()
 
-
 if __name__ == "__main__":
     main()
-
