@@ -110,18 +110,9 @@ def create_driver():
     return driver
 
 def run_browser():
-    # -------------------------------
-    # Combined popup selectors (old + new)
-    # -------------------------------
     selectors = [
-        # Old selectors
-        {"type": "css", "value": ".popup"},
-        {"type": "xpath", "value": "//div[contains(@class, 'modal')]"},
-        {"type": "xpath", "value": "//*[@id='app']/div[4]/div[2]/div[1]/div[2]/div/div[3]"},
-        # New selectors
         {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.message"},
-        {"type": "xpath", "value": "//*[@id=\"app\"]/div[2]/div/div[2]/div[2]"},
-        {"type": "css", "value": ".bsbb.modifyAvatarBox"},
+        {"type": "xpath", "value": "//*[@id='app']/div[2]/div/div[2]/div[2]"},
     ]
 
     alarm_file = resource_path(os.path.join("alarm_sounds", "carrousel.wav"))
