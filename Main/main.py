@@ -111,8 +111,8 @@ def create_driver():
 
 def run_browser():
     selectors = [
-        {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.message"},
-        {"type": "xpath", "value": "//*[@id='app']/div[2]/div/div[2]/div[2]"},
+       {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.message"},
+       {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.title"},
     ]
 
     alarm_file = resource_path(os.path.join("alarm_sounds", "carrousel.wav"))
