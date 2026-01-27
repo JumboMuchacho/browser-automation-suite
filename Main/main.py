@@ -31,13 +31,20 @@ if not LICENSE_SERVER:
     print("LICENSE_SERVER_URL not set in .env. Exiting.")
     sys.exit(1)
 
-# Retry loop for license validation
+# Retry loop for license validation (limited to prevent infinite loops)
+max_retries = 3
+retry_count = 0
 valid = False
-while not valid:
+while not valid and retry_count < max_retries:
     valid = ensure_valid(LICENSE_SERVER, LICENSE_KEY)
     if not valid:
         print("License invalid. Please enter a valid license key.")
         LICENSE_KEY = input("License key: ").strip()
+        retry_count += 1
+
+if not valid:
+    print("Max retries reached. Exiting.")
+    sys.exit(1)
 
 print("License valid. Starting application...")
 
