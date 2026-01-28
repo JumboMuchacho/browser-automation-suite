@@ -4,10 +4,11 @@ import time
 import psutil
 from dotenv import load_dotenv
 
-# Load .env for license info
+# Load environment
 load_dotenv()
 
-from license import ensure_valid, make_fingerprint
+# Import FIXED license module
+from license import ensure_valid
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -22,34 +23,46 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 # -------------------------------
-# LICENSE CHECK (ONLINE ONLY)
+# LICENSE CHECK
 # -------------------------------
 LICENSE_SERVER = os.getenv("LICENSE_SERVER_URL")
 LICENSE_KEY = os.getenv("LICENSE_KEY")
 
 if not LICENSE_SERVER:
-    print("LICENSE_SERVER_URL not set in .env. Exiting.")
+    print("❌ LICENSE_SERVER_URL not set in .env")
+    print("Please add: LICENSE_SERVER_URL=https://license-server-lewp.onrender.com")
     sys.exit(1)
 
-# Retry loop for license validation (limited to prevent infinite loops)
-max_retries = 3
-retry_count = 0
-valid = False
-while not valid and retry_count < max_retries:
-    valid = ensure_valid(LICENSE_SERVER, LICENSE_KEY)
-    if not valid:
-        print("License invalid. Please enter a valid license key.")
-        LICENSE_KEY = input("License key: ").strip()
-        retry_count += 1
+print("🔐 Validating license...")
+
+# Try validation
+valid = ensure_valid(LICENSE_SERVER, LICENSE_KEY)
 
 if not valid:
-    print("Max retries reached. Exiting.")
-    sys.exit(1)
+    print("\nLicense validation failed.")
+    
+    # Ask for license key
+    user_key = input("Enter license key (or 'q' to quit): ").strip()
+    
+    if user_key.lower() == 'q':
+        print("Exiting...")
+        sys.exit(1)
+    
+    # Try with user-provided key
+    valid = ensure_valid(LICENSE_SERVER, user_key)
+    
+    if not valid:
+        print("❌ Invalid license. Exiting.")
+        sys.exit(1)
+    
+    # Save successful key to env for this session
+    os.environ["LICENSE_KEY"] = user_key
 
-print("License valid. Starting application...")
+print("✅ License valid")
+print("🚀 Starting application...")
 
 # -------------------------------
-# Browser functions
+# Browser functions (NO CHANGES)
 # -------------------------------
 def detect_popup(driver, selectors):
     for sel in selectors:
@@ -119,24 +132,25 @@ def run_browser():
 
     driver = None
     try:
-        print("Launching Chrome...")
+        print("🌐 Launching Chrome...")
         driver = create_driver()
-        print("Monitoring for popups... Press CTRL+C to stop.")
+        print("👀 Monitoring for popups... Press CTRL+C to stop.")
+        print("-" * 50)
 
         while True:
             try:
                 for handle in driver.window_handles:
                     driver.switch_to.window(handle)
                     if detect_popup(driver, selectors):
-                        print("[Popup detected]")
+                        print("[ALERT] Popup detected!")
                         play_alarm(alarm_file)
                 time.sleep(30)
             except WebDriverException:
-                print("Browser session ended.")
+                print("⚠️ Browser session ended.")
                 break
 
     except KeyboardInterrupt:
-        print("User stopped the script.")
+        print("\n👋 User stopped the script.")
     finally:
         if driver:
             try:
