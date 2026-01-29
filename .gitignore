@@ -1,3 +1,23 @@
+
+---
+
+## 3️⃣ Updated `.gitignore` (Production-Level)
+
+Your provided `.gitignore` is **excellent**.  
+Only **add these at the top** (important for your project):
+
+```gitignore
+# License runtime artifacts
+.popup_detector/
+*.cache
+
+# Chrome runtime profiles
+.popup_detector_profile/
+
+# PyInstaller output
+dist/
+build/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

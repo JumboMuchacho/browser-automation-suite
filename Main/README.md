@@ -1,136 +1,94 @@
-# Popup Detector (Production Edition)
+# Popup Detector – Licensed Browser Automation Tool
 
-## Overview
+A production-ready, license-protected browser automation utility built with **Python**, **Selenium**, and a secure **FastAPI-based license server**.
 
-Popup Detector is a standalone Chrome monitoring utility designed to **watch for the appearance of a deposit address popup** in real time and **immediately alert the operator with an audible alarm**.
-
-Its sole purpose is to ensure that **the moment a deposit address becomes available**, the user is notified instantly so they can **copy the address and manually complete the required USDT deposit actions (e.g., via Binance)** without delay.
-
-This tool does **not** execute transactions, handle funds, or interact with exchanges. It functions strictly as a **monitoring and alerting assistant** for time-sensitive browser events.
+This application is distributed as a **standalone Windows executable** and enforces **device-bound licensing** with offline support.
 
 ---
 
-## Primary Function
+## 🔐 Licensing Overview
 
-- Monitors the browser DOM for the **deposit address popup**
-- Triggers a **loud alarm immediately when the address appears**
-- Allows the operator to:
-  - Copy the address
-  - Perform manual deposit steps externally
-  - Complete platform-required actions to qualify for bonuses or credits
-
-No automation beyond detection and alerting is performed.
+- One-time license activation per device
+- Hardware-bound (Device ID)
+- Offline operation supported via signed tokens
+- Server-side revocation enforced
+- No `.env` files or plaintext keys shipped
 
 ---
 
-## Key Characteristics
+## 🚀 How Licensing Works
 
-- Real-time DOM-based popup detection
-- Selenium-driven Chrome automation
-- Audible alarm notification (operator-driven response)
-- Headless or visible browser support
-- License-controlled execution
-- Compiled Windows executable for production use
+### First Run
+1. Launch the application
+2. Enter your license key when prompted
+3. License is verified with the server
+4. A signed token is stored securely on the device
 
----
-
-## Intended Use Case
-
-Popup Detector is built for **browser-based operational workflows** where:
-
-- A deposit address appears unpredictably
-- Timing is critical
-- Missing the popup can result in lost opportunity
-- Human confirmation and manual action are required
-
-Typical use includes monitoring **USD-denominated digital credit or gift platforms** that require a user to deposit USDT after an address is generated.
+### Subsequent Runs
+- No prompt
+- No internet required (until token expiry)
+- Automatic revalidation when needed
 
 ---
 
-## What This Tool Does NOT Do
+## 🗂 Local Storage (Automatic)
 
-- Does NOT move funds
-- Does NOT place trades
-- Does NOT interact with Binance APIs
-- Does NOT perform financial transactions
-- Does NOT automate deposits
+| File | Purpose |
+|---|---|
+| `~/.popup_detector/device.id` | Unique device identifier |
+| `~/.popup_detector/license.cache` | Signed license token |
 
-All financial actions are performed **manually by the user**.
+These files should **not be modified manually**.
 
 ---
 
-## Project Structure
+## 🧠 Features
 
-```text
-popup-detector/
-├── alarm_sounds/          # Alarm audio files
-├── client.py              # License client logic
-├── license.py             # License creation & verification
-├── license.json           # Local license configuration
-├── main.py                # Core popup monitoring logic
-├── main.bat               # Windows launcher
-├── popup_detector.spec    # PyInstaller build configuration
-├── requirements.txt       # Python dependencies
-├── version.txt            # Application versioning
-├── README.md
-└── .gitignore
+- Popup detection across browser windows
+- Audible alerts on detection
+- Chrome profile isolation
+- License enforcement with device limits
+- PyInstaller-compatible
 
-```
-## Running from Source (Development)
+---
 
-### Requirements
-- **Python 3.x**  
-- **Google Chrome or Chromium**  
-- **Matching ChromeDriver**  
+## 📦 Project Structure
 
-### Setup
-Install dependencies and run:
+.
+├── main.py                 # Application entry point
+├── license.py              # License validation logic
+├── chrome/                 # Browser profile data
+├── chromedriver/           # Selenium webdriver binaries
+├── alarm_sounds/           # Audio alert files (wav/mp3)
+├── requirements.txt        # Python dependencies
+└── README.md               # Documentation
+
+---
+
+## 🛠 Development Setup (Optional)
 
 ```bash
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
 python main.py
 
 ```
-## Ensure:
 
-- Chrome.exe exists under chromedriver/chrome-win64/
+## 🏗 Build Executable
 
-- Chromedriver.exe exists under chromedriver/chromedriver-win64/
+pyinstaller --onefile --noconsole main.py ^
+  --add-data "alarm_sounds;alarm_sounds" ^
+  --add-data "chrome;chrome" ^
+  --add-data "chromedriver;chromedriver"
+Output will be in dist/.
 
-- Alarm audio files are present in alarm_sounds/
+## 🔒 Security Notes
+- License verification uses HMAC signatures
+- Secrets never leave the server
+- Tokens are device-bound and time-limited
+- Copying the .exe does not bypass licensing
 
-## Executable Releases
-
-Precompiled Windows executables are available under GitHub Releases.
-
-No Python installation required
-
-No dependency setup
-
-License-controlled execution
-
-Intended for production operators
-
-Download the latest .exe and run it directly.
-
-## Licensing & Access Control
-
-Popup Detector uses a custom license system for controlled deployment.
-
-Each installation requires a valid license
-
-Execution is blocked without authorization
-
-Access can be enabled or revoked centrally
-
-This ensures safe distribution without exposing unrestricted access or source code.
-
-## Notes
-
-This repository represents the production edition
-
-Earlier experimental prototypes are superseded by this version
-
-Disclaimer
-USD denomination references digital platform credits only.
-This software does not provide financial, trading, or payment services.
+## ❓ Support
+If your license is revoked or expires, the application will prompt for a new key.
+Contact the distributor for license issues.

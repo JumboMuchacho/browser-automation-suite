@@ -2,12 +2,8 @@ import os
 import sys
 import time
 import psutil
-from dotenv import load_dotenv
 
-# Load .env for license info
-load_dotenv()
-
-from license import ensure_valid, make_fingerprint
+from license import ensure_valid
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -15,140 +11,113 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
 
-# ---------- PYINSTALLER SAFE PATH ----------
-def resource_path(relative_path):
+# ------------------------------
+# Configuration (NO .env)
+# ------------------------------
+LICENSE_SERVER_URL = "https://license-server-lewp.onrender.com"
+
+# ------------------------------
+# PyInstaller-safe paths
+# ------------------------------
+def resource_path(rel):
     if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
+        return os.path.join(sys._MEIPASS, rel)
+    return os.path.join(os.path.abspath("."), rel)
 
-# -------------------------------
-# LICENSE CHECK (ONLINE ONLY)
-# -------------------------------
-LICENSE_SERVER = os.getenv("LICENSE_SERVER_URL")
-LICENSE_KEY = os.getenv("LICENSE_KEY")
+# ------------------------------
+# License validation
+# ------------------------------
+print("🔐 Validating license...")
 
-if not LICENSE_SERVER:
-    print("LICENSE_SERVER_URL not set in .env. Exiting.")
-    sys.exit(1)
+if not ensure_valid(LICENSE_SERVER_URL):
+    print("❗ License not activated on this device.")
+    user_key = input("Enter license key (or q to quit): ").strip()
 
-# Retry loop for license validation (limited to prevent infinite loops)
-max_retries = 3
-retry_count = 0
-valid = False
-while not valid and retry_count < max_retries:
-    valid = ensure_valid(LICENSE_SERVER, LICENSE_KEY)
-    if not valid:
-        print("License invalid. Please enter a valid license key.")
-        LICENSE_KEY = input("License key: ").strip()
-        retry_count += 1
+    if user_key.lower() == "q":
+        sys.exit(1)
 
-if not valid:
-    print("Max retries reached. Exiting.")
-    sys.exit(1)
+    if not ensure_valid(LICENSE_SERVER_URL, user_key):
+        print("❌ Invalid or revoked license.")
+        sys.exit(1)
 
-print("License valid. Starting application...")
+print("✅ License valid")
 
-# -------------------------------
-# Browser functions
-# -------------------------------
+# ------------------------------
+# Browser helpers
+# ------------------------------
 def detect_popup(driver, selectors):
     for sel in selectors:
         try:
             if sel["type"] == "css":
-                elem = driver.find_element(By.CSS_SELECTOR, sel["value"])
-            elif sel["type"] == "xpath":
-                elem = driver.find_element(By.XPATH, sel["value"])
-            else:
-                continue
-            if elem:
-                return elem
+                return driver.find_element(By.CSS_SELECTOR, sel["value"])
+            if sel["type"] == "xpath":
+                return driver.find_element(By.XPATH, sel["value"])
         except NoSuchElementException:
-            continue
+            pass
     return None
 
-def play_alarm(audio_file):
+def play_alarm(path):
     try:
         import winsound
-        winsound.PlaySound(audio_file, winsound.SND_FILENAME)
-    except Exception as e:
-        print(f"Could not play alarm: {e}")
+        winsound.PlaySound(path, winsound.SND_FILENAME)
+    except:
+        pass
 
 def close_existing_chrome():
-    chrome_exe = resource_path(os.path.join("chrome", "chrome.exe"))
-    for proc in psutil.process_iter(['name', 'exe']):
+    chrome_exe = resource_path("chrome/chrome.exe")
+    for proc in psutil.process_iter(["exe"]):
         try:
-            if proc.info['exe'] and os.path.samefile(proc.info['exe'], chrome_exe):
+            if proc.info["exe"] and os.path.samefile(proc.info["exe"], chrome_exe):
                 proc.kill()
-        except Exception:
-            continue
+        except:
+            pass
 
 def create_driver():
     close_existing_chrome()
 
-    chrome_path = resource_path(os.path.join("chrome", "chrome.exe"))
-    chromedriver_path = resource_path(os.path.join("chromedriver", "chromedriver.exe"))
+    chrome = resource_path("chrome/chrome.exe")
+    driver_bin = resource_path("chromedriver/chromedriver.exe")
 
-    profile_dir = os.path.join(os.path.expanduser("~"), ".popup_detector_profile")
-    os.makedirs(profile_dir, exist_ok=True)
-
-    if not os.path.exists(chrome_path) or not os.path.exists(chromedriver_path):
-        raise FileNotFoundError("Chrome or ChromeDriver not found.")
+    profile = os.path.join(os.path.expanduser("~"), ".popup_detector_profile")
+    os.makedirs(profile, exist_ok=True)
 
     options = Options()
-    options.binary_location = chrome_path
+    options.binary_location = chrome
+    options.add_argument(f"--user-data-dir={profile}")
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument(f"--user-data-dir={profile_dir}")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-extensions")
     options.add_argument("--disable-gpu")
-    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
     options.add_experimental_option("detach", True)
 
-    service = Service(executable_path=chromedriver_path)
+    service = Service(driver_bin)
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_page_load_timeout(60)
     return driver
 
+# ------------------------------
+# Main loop
+# ------------------------------
 def run_browser():
     selectors = [
-       {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.message"},
-       {"type": "css", "value": "#app > div.flexcc.commonModal-wrap > div > div.normal > div.title"},
+        {"type": "css", "value": "#app div.commonModal-wrap div.normal div.message"},
+        {"type": "css", "value": "#app div.commonModal-wrap div.normal div.title"},
     ]
 
-    alarm_file = resource_path(os.path.join("alarm_sounds", "carrousel.wav"))
+    alarm = resource_path("alarm_sounds/carrousel.wav")
+    driver = create_driver()
 
-    driver = None
     try:
-        print("Launching Chrome...")
-        driver = create_driver()
-        print("Monitoring for popups... Press CTRL+C to stop.")
-
         while True:
-            try:
-                for handle in driver.window_handles:
-                    driver.switch_to.window(handle)
-                    if detect_popup(driver, selectors):
-                        print("[Popup detected]")
-                        play_alarm(alarm_file)
-                time.sleep(30)
-            except WebDriverException:
-                print("Browser session ended.")
-                break
-
-    except KeyboardInterrupt:
-        print("User stopped the script.")
+            for handle in driver.window_handles:
+                driver.switch_to.window(handle)
+                if detect_popup(driver, selectors):
+                    print("⚠ Popup detected")
+                    play_alarm(alarm)
+            time.sleep(30)
+    except WebDriverException:
+        pass
     finally:
-        if driver:
-            try:
-                driver.quit()
-            except Exception:
-                pass
-
-# -------------------------------
-# MAIN
-# -------------------------------
-def main():
-    run_browser()
+        driver.quit()
 
 if __name__ == "__main__":
-    main()
+    run_browser()
