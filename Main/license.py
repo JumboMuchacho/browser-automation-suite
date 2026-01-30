@@ -8,6 +8,9 @@ import time
 import base64
 from pathlib import Path
 
+# MUST MATCH SERVER
+LICENSE_SECRET = "<<< SAME VALUE AS SERVER >>>"
+
 # ------------------------------
 # Device ID (persistent)
 # ------------------------------
@@ -19,39 +22,15 @@ def get_device_id():
     if path.exists():
         return path.read_text().strip()
 
-    parts = []
-
-    try:
-        mac = uuid.getnode()
-        if mac:
-            parts.append(str(mac))
-    except:
-        pass
-
-    parts.append(platform.node())
-
-    raw = "|".join(sorted(parts))
+    raw = f"{uuid.getnode()}|{platform.node()}"
     device_id = hashlib.sha256(raw.encode()).hexdigest()
     path.write_text(device_id)
     return device_id
 
 # ------------------------------
-# Client secret derivation
-# ------------------------------
-def get_client_secret(device_id: str):
-    SALT = b"popup_detector_v2_secure_salt_2024"
-    return hashlib.pbkdf2_hmac(
-        "sha256",
-        device_id.encode(),
-        SALT,
-        100_000,
-        dklen=32,
-    )
-
-# ------------------------------
 # Signature verification
 # ------------------------------
-def verify_signature(payload, signature, device_id):
+def verify_signature(payload, signature):
     raw = json.dumps(
         payload,
         sort_keys=True,
@@ -60,7 +39,7 @@ def verify_signature(payload, signature, device_id):
     ).encode("utf-8")
 
     expected = hmac.new(
-        get_client_secret(device_id),
+        LICENSE_SECRET.encode(),
         raw,
         hashlib.sha256
     ).hexdigest()
@@ -73,7 +52,6 @@ def verify_signature(payload, signature, device_id):
 class LicenseCache:
     def __init__(self):
         self.path = Path.home() / ".popup_detector" / "license.cache"
-        self.ttl = 3600
 
     def load(self):
         if not self.path.exists():
@@ -81,26 +59,23 @@ class LicenseCache:
 
         try:
             data = json.loads(base64.b64decode(self.path.read_text()))
-            if time.time() - data["cached_at"] > self.ttl:
-                return None
-            if data["device"] != get_device_id():
-                return None
             if time.time() > data["token"]["exp"]:
                 return None
-            if not verify_signature(data["token"], data["signature"], data["device"]):
+            if data["token"]["device"] != get_device_id():
+                return None
+            if not verify_signature(data["token"], data["signature"]):
                 return None
             return data
         except:
             return None
 
-    def save(self, token, signature, device):
-        data = {
-            "token": token,
-            "signature": signature,
-            "device": device,
-            "cached_at": int(time.time()),
-        }
-        encoded = base64.b64encode(json.dumps(data).encode()).decode()
+    def save(self, token, signature):
+        encoded = base64.b64encode(
+            json.dumps({
+                "token": token,
+                "signature": signature,
+            }).encode()
+        ).decode()
         self.path.write_text(encoded)
 
 # ------------------------------
@@ -121,7 +96,6 @@ def ensure_valid(server_url, license_key=None):
         json={
             "license_key": license_key,
             "device_id": device_id,
-            "timestamp": int(time.time()),
         },
         timeout=20,
     )
@@ -133,11 +107,8 @@ def ensure_valid(server_url, license_key=None):
     token = data["token"]
     signature = data["signature"]
 
-    if token["device"] != device_id:
+    if not verify_signature(token, signature):
         return False
 
-    if not verify_signature(token, signature, device_id):
-        return False
-
-    cache.save(token, signature, device_id)
+    cache.save(token, signature)
     return True
