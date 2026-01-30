@@ -8,29 +8,22 @@ import time
 import base64
 from pathlib import Path
 
-# MUST MATCH SERVER
-LICENSE_SECRET = "<<< SAME VALUE AS SERVER >>>"
+# MUST MATCH THE "LICENSE_SECRET" IN YOUR SERVER'S .ENV
+LICENSE_SECRET = "bb55f4f433ad5c39042ff80d35431c7355b1a638b4ec8c242779484f9079f37b" 
 
-# ------------------------------
-# Device ID (persistent)
-# ------------------------------
 def get_device_id():
     base = Path.home() / ".popup_detector"
     base.mkdir(exist_ok=True)
     path = base / "device.id"
-
     if path.exists():
         return path.read_text().strip()
-
     raw = f"{uuid.getnode()}|{platform.node()}"
     device_id = hashlib.sha256(raw.encode()).hexdigest()
     path.write_text(device_id)
     return device_id
 
-# ------------------------------
-# Signature verification
-# ------------------------------
 def verify_signature(payload, signature):
+    # Standardizing JSON format to match server exactly
     raw = json.dumps(
         payload,
         sort_keys=True,
@@ -46,9 +39,6 @@ def verify_signature(payload, signature):
 
     return hmac.compare_digest(expected, signature)
 
-# ------------------------------
-# Cache
-# ------------------------------
 class LicenseCache:
     def __init__(self):
         self.path = Path.home() / ".popup_detector" / "license.cache"
@@ -56,13 +46,15 @@ class LicenseCache:
     def load(self):
         if not self.path.exists():
             return None
-
         try:
             data = json.loads(base64.b64decode(self.path.read_text()))
+            # Validate expiration
             if time.time() > data["token"]["exp"]:
                 return None
+            # Validate device binding
             if data["token"]["device"] != get_device_id():
                 return None
+            # Validate signature
             if not verify_signature(data["token"], data["signature"]):
                 return None
             return data
@@ -78,37 +70,41 @@ class LicenseCache:
         ).decode()
         self.path.write_text(encoded)
 
-# ------------------------------
-# Validation
-# ------------------------------
 def ensure_valid(server_url, license_key=None):
     device_id = get_device_id()
     cache = LicenseCache()
 
-    if cache.load():
-        return True
-
+    # If already cached and valid, skip network
     if not license_key:
+        cached = cache.load()
+        return True if cached else False
+
+    try:
+        r = requests.post(
+            f"{server_url.rstrip('/')}/verify",
+            json={
+                "license_key": license_key,
+                "device_id": device_id,
+            },
+            timeout=20,
+        )
+
+        if r.status_code != 200:
+            return False
+
+        data = r.json()
+        token = data.get("token")
+        signature = data.get("signature")
+
+        if not token or not signature:
+            return False
+
+        if not verify_signature(token, signature):
+            print("⚠ Signature mismatch! Check LICENSE_SECRET.")
+            return False
+
+        cache.save(token, signature)
+        return True
+    except Exception as e:
+        print(f"Connection error: {e}")
         return False
-
-    r = requests.post(
-        f"{server_url.rstrip('/')}/verify",
-        json={
-            "license_key": license_key,
-            "device_id": device_id,
-        },
-        timeout=20,
-    )
-
-    if r.status_code != 200:
-        return False
-
-    data = r.json()
-    token = data["token"]
-    signature = data["signature"]
-
-    if not verify_signature(token, signature):
-        return False
-
-    cache.save(token, signature)
-    return True

@@ -1,123 +1,162 @@
 import os
-import sys
 import time
-import psutil
+from datetime import datetime, timezone
+import logging
+import hmac
+import hashlib
+import json
+from typing import Optional
 
-from license import ensure_valid
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from dotenv import load_dotenv
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import NoSuchElementException, WebDriverException
+# Import local modules
+from database import SessionLocal, engine, get_db
+import models
+from admin_routes import router as admin_router
 
-# ------------------------------
-# Configuration (NO .env)
-# ------------------------------
-LICENSE_SERVER_URL = "https://license-server-lewp.onrender.com"
+# ----------------------------
+# Setup & Config
+# ----------------------------
+load_dotenv()
 
-# ------------------------------
-# PyInstaller-safe paths
-# ------------------------------
-def resource_path(rel):
-    if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, rel)
-    return os.path.join(os.path.abspath("."), rel)
+LICENSE_SECRET = os.getenv("LICENSE_SECRET")
+OFFLINE_TTL_HOURS = int(os.getenv("TOKEN_TTL_HOURS", 24))
 
-# ------------------------------
-# License validation
-# ------------------------------
-print("🔐 Validating license...")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-if not ensure_valid(LICENSE_SERVER_URL):
-    print("❗ License not activated on this device.")
-    user_key = input("Enter license key (or q to quit): ").strip()
+app = FastAPI(title="License Server")
 
-    if user_key.lower() == "q":
-        sys.exit(1)
+# ----------------------------
+# 1. Health Checks (TOP PRIORITY)
+# ----------------------------
+# Defined at the top so FastAPI hits these before any static file routing
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
-    if not ensure_valid(LICENSE_SERVER_URL, user_key):
-        print("❌ Invalid or revoked license.")
-        sys.exit(1)
+@app.get("/")
+def index():
+    return {"message": "License Server API is running"}
 
-print("✅ License valid")
+# ----------------------------
+# 2. Routers & Static Files
+# ----------------------------
+app.include_router(admin_router)
 
-# ------------------------------
-# Browser helpers
-# ------------------------------
-def detect_popup(driver, selectors):
-    for sel in selectors:
-        try:
-            if sel["type"] == "css":
-                return driver.find_element(By.CSS_SELECTOR, sel["value"])
-            if sel["type"] == "xpath":
-                return driver.find_element(By.XPATH, sel["value"])
-        except NoSuchElementException:
-            pass
-    return None
+# Mount the Admin UI
+# Ensure this directory exists: static/admin/index.html
+app.mount(
+    "/admin-ui",
+    StaticFiles(directory="static/admin", html=True),
+    name="admin-ui",
+)
 
-def play_alarm(path):
-    try:
-        import winsound
-        winsound.PlaySound(path, winsound.SND_FILENAME)
-    except:
-        pass
+# ----------------------------
+# Database Initialization
+# ----------------------------
+@app.on_event("startup")
+def startup():
+    models.Base.metadata.create_all(bind=engine)
+    logger.info("Database tables verified/created.")
 
-def close_existing_chrome():
-    chrome_exe = resource_path("chrome/chrome.exe")
-    for proc in psutil.process_iter(["exe"]):
-        try:
-            if proc.info["exe"] and os.path.samefile(proc.info["exe"], chrome_exe):
-                proc.kill()
-        except:
-            pass
+# ----------------------------
+# Schemas
+# ----------------------------
+class VerifyRequest(BaseModel):
+    license_key: str
+    device_id: str
+    client_version: Optional[str] = None
 
-def create_driver():
-    close_existing_chrome()
+# ----------------------------
+# Helper: Signing
+# ----------------------------
+def sign_payload(payload: dict) -> str:
+    raw = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False
+    ).encode("utf-8")
 
-    chrome = resource_path("chrome/chrome.exe")
-    driver_bin = resource_path("chromedriver/chromedriver.exe")
+    return hmac.new(
+        LICENSE_SECRET.encode(),
+        raw,
+        hashlib.sha256
+    ).hexdigest()
 
-    profile = os.path.join(os.path.expanduser("~"), ".popup_detector_profile")
-    os.makedirs(profile, exist_ok=True)
+# ----------------------------
+# 3. Verify Route
+# ----------------------------
+@app.post("/verify")
+def verify(req: VerifyRequest, db: Session = Depends(get_db)):
+    # Modern UTC Timestamp (Naive for SQLAlchemy compatibility)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    options = Options()
-    options.binary_location = chrome
-    options.add_argument(f"--user-data-dir={profile}")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_experimental_option("detach", True)
+    # 1. Look for the license
+    lic = (
+        db.query(models.License)
+        .filter(models.License.license_key == req.license_key, models.License.active == True)
+        .first()
+    )
 
-    service = Service(driver_bin)
-    driver = webdriver.Chrome(service=service, options=options)
-    driver.set_page_load_timeout(60)
-    return driver
+    if not lic:
+        raise HTTPException(status_code=404, detail="License invalid or revoked")
 
-# ------------------------------
-# Main loop
-# ------------------------------
-def run_browser():
-    selectors = [
-        {"type": "css", "value": "#app div.commonModal-wrap div.normal div.message"},
-        {"type": "css", "value": "#app div.commonModal-wrap div.normal div.title"},
-    ]
+    # 2. Check Expiry
+    if lic.expires_at and lic.expires_at < now:
+        raise HTTPException(status_code=410, detail="License expired")
 
-    alarm = resource_path("alarm_sounds/carrousel.wav")
-    driver = create_driver()
+    # 3. Handle Device Binding (Unique Device Constraint Logic)
+    existing_device = db.query(models.Device).filter_by(device_id=req.device_id).first()
 
-    try:
-        while True:
-            for handle in driver.window_handles:
-                driver.switch_to.window(handle)
-                if detect_popup(driver, selectors):
-                    print("⚠ Popup detected")
-                    play_alarm(alarm)
-            time.sleep(30)
-    except WebDriverException:
-        pass
-    finally:
-        driver.quit()
+    if existing_device:
+        # If this device is already registered to a DIFFERENT license, block it
+        if existing_device.license_id != lic.id:
+            logger.warning(f"Device {req.device_id} tried to switch licenses.")
+            raise HTTPException(status_code=403, detail="Device already bound to another license")
+        
+        # If it's the same license, just update the heartbeat
+        existing_device.last_seen = now
+        db.commit()
+    else:
+        # New device: Check if the license has room
+        count = db.query(models.Device).filter_by(license_id=lic.id).count()
+        if count >= lic.max_devices:
+            raise HTTPException(status_code=429, detail="Maximum device limit reached")
 
+        # Create new binding
+        new_device = models.Device(
+            license_id=lic.id,
+            device_id=req.device_id,
+            last_seen=now
+        )
+        db.add(new_device)
+        db.commit()
+
+    # 4. Generate signed response
+    expires = int(time.time()) + (OFFLINE_TTL_HOURS * 3600)
+    
+    token = {
+        "license": req.license_key,
+        "device": req.device_id,
+        "exp": expires,
+    }
+
+    return {
+        "status": "success",
+        "token": token,
+        "signature": sign_payload(token),
+    }
+
+# ----------------------------
+# Entry point
+# ----------------------------
 if __name__ == "__main__":
-    run_browser()
+    import uvicorn
+    port = int(os.getenv("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
