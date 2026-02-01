@@ -7,7 +7,7 @@ An enterprise-ready automation utility built for real-time monitoring of dynamic
 ## 🌟 Key Features
 
 - **Multi-Tab Intelligent Scanning:** Unlike standard bots, Poptest iterates through all active window handles, switching context dynamically to detect popups/modals across different sessions.
-- **Persistent User Personas:** Profiles are stored in `~/.popup_detector_profile`. This ensures that even if the `.exe` is moved or renamed, user cookies and login sessions (e.g., GameMania) remain intact.
+- **Persistent User Personas:** Profiles are stored in `~/.poptest_profile`. This ensures that even if the `.exe` is moved or renamed, user cookies and login sessions (e.g., GameMania) remain intact.
 - **Bypass Detection:** Implements `AutomationControlled` flags and custom options to mimic human browser behavior and reduce bot-detection triggers.
 - **Smart Resource Management:** Uses `psutil` to identify and terminate "zombie" Chromium processes, ensuring zero resource leakage between application restarts.
 - **Resource Bundling:** Dynamically resolves paths for Chromium binaries and audio assets using `sys._MEIPASS`, allowing for a truly portable, single-file distribution.

@@ -60,7 +60,7 @@ def create_driver():
     chrome_bin = resource_path("chrome/chrome.exe")
     driver_bin = resource_path("chromedriver/chromedriver.exe")
 
-    profile = os.path.join(os.path.expanduser("~"), ".popup_detector_profile")
+    profile = os.path.join(os.path.expanduser("~"), ".poptest_profile")
     os.makedirs(profile, exist_ok=True)
 
     options = Options()
@@ -69,7 +69,7 @@ def create_driver():
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
-    options.add_experimental_option("detach", True)
+    options.add_experimental_option("detach", False)
 
     service = Service(driver_bin)
     driver = webdriver.Chrome(service=service, options=options)
@@ -130,7 +130,7 @@ def run_automation():
                     print(f"[{time.strftime('%H:%M:%S')}] ⚠ Address detected!")
                     play_alarm(alarm_file)
             
-            time.sleep(10) 
+            time.sleep(60) 
 
     except (WebDriverException, KeyboardInterrupt):
         print("\nBye Bye...")

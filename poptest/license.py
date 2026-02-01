@@ -11,7 +11,7 @@ from pathlib import Path
 LICENSE_SECRET = "bb55f4f433ad5c39042ff80d35431c7355b1a638b4ec8c242779484f9079f37b" 
 
 def get_base_dir():
-    base = Path.home() / ".popup_detector"
+    base = Path.home() / ".poptest"
     base.mkdir(exist_ok=True)
     return base
 

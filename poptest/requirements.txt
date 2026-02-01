@@ -2,4 +2,4 @@ requests
 psutil
 selenium
 fastapi
-sqlqlchemy
+sqlalchemy
