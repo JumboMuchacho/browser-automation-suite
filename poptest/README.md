@@ -1,4 +1,4 @@
-# 🛡️ Poptest: Secure Browser Automation & Monitoring
+# ⚙️ Poptest: Secure Browser Automation & Monitoring
 
 An enterprise-ready automation utility built for real-time monitoring of dynamic web elements. This suite features a robust **Challenge-Response Authentication** system, hardware-bound licensing, and persistent browser state management.
 
