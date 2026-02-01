@@ -90,6 +90,8 @@ def run_automation():
     alarm_file = resource_path("alarm_sounds/carrousel.wav")
     
     print("🚀 Launching Browser...")
+    print("In the opened Chromium Tab navigate as you would and create profiles and login to gamemania, copy paste the website URL from the browser address bar to the other open tabs log in and start clicking...")
+    print("You will be notified if an address lands, adjust volume accordingly.")       
     driver = create_driver()
 
     try:
@@ -98,11 +100,11 @@ def run_automation():
             for handle in driver.window_handles:
                 driver.switch_to.window(handle)
                 if detect_popup(driver, selectors):
-                    print(f"[{time.strftime('%H:%M:%S')}] ⚠ Popup detected!")
+                    print(f"[{time.strftime('%H:%M:%S')}] ⚠ Address detected!")
                     play_alarm(alarm_file)
-            time.sleep(30)
+            time.sleep(60)
     except (WebDriverException, KeyboardInterrupt):
-        print("\nStopping...")
+        print("\nBye Bye...")
     finally:
         try:
             driver.quit()
@@ -135,7 +137,7 @@ if __name__ == "__main__":
                     print("Please try again.\n")
 
         if not authenticated:
-            print("🚫 Auth Failed... Do contact admin for aid\n0725766022")
+            print("🚫 Auth Failed... Do contact admin for aid\nTel:0725766022")
             input("\nClick Enter to exit...")
             sys.exit(1)
 
