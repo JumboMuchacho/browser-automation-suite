@@ -8,12 +8,15 @@ import time
 import base64
 from pathlib import Path
 
-# MUST MATCH THE "LICENSE_SECRET" IN YOUR SERVER'S .ENV
 LICENSE_SECRET = "bb55f4f433ad5c39042ff80d35431c7355b1a638b4ec8c242779484f9079f37b" 
 
-def get_device_id():
+def get_base_dir():
     base = Path.home() / ".popup_detector"
     base.mkdir(exist_ok=True)
+    return base
+
+def get_device_id():
+    base = get_base_dir()
     path = base / "device.id"
     if path.exists():
         return path.read_text().strip()
@@ -23,7 +26,6 @@ def get_device_id():
     return device_id
 
 def verify_signature(payload, signature):
-    # Standardizing JSON format to match server exactly
     raw = json.dumps(
         payload,
         sort_keys=True,
@@ -41,20 +43,17 @@ def verify_signature(payload, signature):
 
 class LicenseCache:
     def __init__(self):
-        self.path = Path.home() / ".popup_detector" / "license.cache"
+        self.path = get_base_dir() / "license.cache"
 
     def load(self):
         if not self.path.exists():
             return None
         try:
             data = json.loads(base64.b64decode(self.path.read_text()))
-            # Validate expiration
             if time.time() > data["token"]["exp"]:
                 return None
-            # Validate device binding
             if data["token"]["device"] != get_device_id():
                 return None
-            # Validate signature
             if not verify_signature(data["token"], data["signature"]):
                 return None
             return data
@@ -74,7 +73,6 @@ def ensure_valid(server_url, license_key=None):
     device_id = get_device_id()
     cache = LicenseCache()
 
-    # If already cached and valid, skip network
     if not license_key:
         cached = cache.load()
         return True if cached else False

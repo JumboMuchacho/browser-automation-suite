@@ -49,7 +49,6 @@ def close_existing_chrome():
     chrome_exe = resource_path("chrome/chrome.exe")
     for proc in psutil.process_iter(["exe"]):
         try:
-            # os.path.samefile ensures we don't kill the user's personal Chrome
             if proc.info["exe"] and os.path.exists(chrome_exe) and os.path.samefile(proc.info["exe"], chrome_exe):
                 proc.kill()
         except:
@@ -61,7 +60,7 @@ def create_driver():
     chrome_bin = resource_path("chrome/chrome.exe")
     driver_bin = resource_path("chromedriver/chromedriver.exe")
 
-    # Local profile so login sessions persist
+    # Fixed global path for profile ensures renaming the EXE doesn't lose login sessions
     profile = os.path.join(os.path.expanduser("~"), ".popup_detector_profile")
     os.makedirs(profile, exist_ok=True)
 
@@ -90,13 +89,13 @@ def run_automation():
     alarm_file = resource_path("alarm_sounds/carrousel.wav")
     
     print("🚀 Launching Browser...")
+    print("Please wait...") # Implementation of your previous request
     print("In the opened Chromium Tab navigate as you would and create profiles and login to gamemania, copy paste the website URL from the browser address bar to the other open tabs log in and start clicking...")
     print("You will be notified if an address lands, adjust volume accordingly.")       
     driver = create_driver()
 
     try:
         while True:
-            # Check all open tabs
             for handle in driver.window_handles:
                 driver.switch_to.window(handle)
                 if detect_popup(driver, selectors):
@@ -114,14 +113,12 @@ def run_automation():
 if __name__ == "__main__":
     print("🔐 Validating credentials...")
 
-    # 1. Check cache first (silent check)
     if not ensure_valid(LICENSE_SERVER_URL):
         print("❗ Please Enter valid license key")
         
         max_attempts = 3
         authenticated = False
 
-        # 2. Loop for 3 attempts
         for attempt in range(1, max_attempts + 1):
             user_key = input(f"Input valid credentials(Attempt {attempt}/{max_attempts}) or 'q' to quit: ").strip()
 
@@ -130,7 +127,7 @@ if __name__ == "__main__":
 
             if ensure_valid(LICENSE_SERVER_URL, user_key):
                 authenticated = True
-                break  # Exit loop on success
+                break
             else:
                 print(f"❌ Your authentication is invalid.")
                 if attempt < max_attempts:
@@ -141,6 +138,5 @@ if __name__ == "__main__":
             input("\nClick Enter to exit...")
             sys.exit(1)
 
-    # 3. Success
     print("✅ Access Granted.")
     run_automation()
