@@ -84,7 +84,7 @@ def ensure_valid(server_url, license_key=None):
                 "license_key": license_key,
                 "device_id": device_id,
             },
-            timeout=20,
+            timeout=70, # Increased slightly to handle Render cold-starts
         )
 
         if r.status_code != 200:
@@ -98,11 +98,10 @@ def ensure_valid(server_url, license_key=None):
             return False
 
         if not verify_signature(token, signature):
-            print("⚠ Signature mismatch! Check LICENSE_SECRET.")
             return False
 
         cache.save(token, signature)
         return True
-    except Exception as e:
-        print(f"Connection error: {e}")
+    except (requests.exceptions.RequestException, Exception):
+        # Silently catch timeouts and connection pools
         return False

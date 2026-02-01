@@ -18,7 +18,6 @@ from selenium.common.exceptions import NoSuchElementException, WebDriverExceptio
 LICENSE_SERVER_URL = "https://license-server-lewp.onrender.com"
 
 def resource_path(rel):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, rel)
     return os.path.join(os.path.abspath("."), rel)
@@ -45,7 +44,6 @@ def play_alarm(path):
         print(f"Audio Error: {e}")
 
 def close_existing_chrome():
-    """Kills any chrome instances running from our specific bundle folder"""
     chrome_exe = resource_path("chrome/chrome.exe")
     for proc in psutil.process_iter(["exe"]):
         try:
@@ -56,7 +54,6 @@ def close_existing_chrome():
 
 def create_driver():
     close_existing_chrome()
-
     chrome_bin = resource_path("chrome/chrome.exe")
     driver_bin = resource_path("chromedriver/chromedriver.exe")
 
@@ -84,10 +81,8 @@ def run_automation():
         {"type": "css", "value": "#app div.commonModal-wrap div.normal div.message"},
         {"type": "css", "value": "#app div.commonModal-wrap div.normal div.title"},
     ]
-    
     alarm_file = resource_path("alarm_sounds/carrousel.wav")
     
-    # Clean UI Implementation
     os.system('cls' if os.name == 'nt' else 'clear')
     print("="*65)
     print("  🚀 POPTEST - ACCESS GRANTED  ".center(65))
@@ -96,27 +91,25 @@ def run_automation():
     print("  1.  Navigate to the new Chrome Tab")
     print("  2.  Click 'Add +', then 'Continue without account'")
     print("  3.  Label tab with the 'Tel no.' for your login")
-    print("  4.  Login to Gamemania after pasting the link in browser https://www.gamemania.co.ke/login?isBack=1")
+    print("  4.  Login to Gamemania: https://www.gamemania.co.ke/login?isBack=1")
     print("  5.  Paste link into all other tabs & login")
     print("-" * 65)
     print("  [✓] Engage Autoclicker")
     print("  [✓] Adjust volume accordingly")
     print("-" * 65)
     print("  💡 STATUS: Monitoring... Minimize window ")
-    print("  📞 Contact Admin for queries: 0725766022")
+    print("  📞 Contact Admin: 0725766022")
     print("\n" + "="*65)
 
     driver = create_driver()
-    
     start_time = time.time()
     cleared = False
 
     try:
         while True:
-            # Clear logic: 180 seconds = 3 minutes
             if not cleared and (time.time() - start_time) > 180:
                 os.system('cls' if os.name == 'nt' else 'clear')
-                print(f"[{time.strftime('%H:%M:%S')}] 🟢 Script Running. Minimize window, do not close.")
+                print(f"[{time.strftime('%H:%M:%S')}] 🟢 Script Running. Minimize window.")
                 print("Bonne chasse! 🎯")
                 cleared = True
 
@@ -126,11 +119,10 @@ def run_automation():
                     if not cleared:
                         os.system('cls' if os.name == 'nt' else 'clear')
                         cleared = True
-                        
                     print(f"[{time.strftime('%H:%M:%S')}] ⚠ Address detected!")
                     play_alarm(alarm_file)
             
-            time.sleep(60) 
+            time.sleep(20) # Changed from 60 to 10 for better detection speed
 
     except (WebDriverException, KeyboardInterrupt):
         print("\nBye Bye...")
@@ -144,10 +136,11 @@ if __name__ == "__main__":
     os.system('cls' if os.name == 'nt' else 'clear')
     print("🔐 Validating credentials...")
 
+    # Silent initial check
     if not ensure_valid(LICENSE_SERVER_URL):
-        print("❗ Please Enter valid license key")
+        print(" (Note: First connection might take 30-60s to wake up the server)\n")
         
-        max_attempts = 3
+        max_attempts = 4
         authenticated = False
 
         for attempt in range(1, max_attempts + 1):
@@ -156,16 +149,17 @@ if __name__ == "__main__":
             if user_key.lower() == 'q' or not user_key:
                 sys.exit(0)
 
+            print(" Verifying...", end="\r")
             if ensure_valid(LICENSE_SERVER_URL, user_key):
                 authenticated = True
                 break
             else:
-                print(f"❌ Authentication invalid.")
+                print(f"❌ Authentication failed or Server Timeout.")
                 if attempt < max_attempts:
-                    print("Please try again.\n")
+                    print(" Please try again (Server may still be waking up).\n")
 
         if not authenticated:
-            print("🚫 Auth Failed... Contact admin for aid\nTel: 0725766022")
+            print("🚫 Auth Failed... Contact admin: 0725766022")
             input("\nClick Enter to exit...")
             sys.exit(1)
 
