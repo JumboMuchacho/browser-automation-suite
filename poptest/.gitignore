@@ -24,3 +24,11 @@ profiles/
 # OS junk
 Thumbs.db
 .DS_Store
+
+# Ignore the heavy embedded browser
+poptest/chrome/
+poptest/chromedriver/
+
+# Ignore the build artifacts
+*.spec
+.poptest_profile/

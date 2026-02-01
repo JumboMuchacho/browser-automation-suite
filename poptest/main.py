@@ -73,9 +73,6 @@ def create_driver():
     driver.set_page_load_timeout(60)
     return driver
 
-# ------------------------------
-# Execution Loop
-# ------------------------------
 def run_automation():
     selectors = [
         {"type": "css", "value": "#app div.commonModal-wrap div.normal div.message"},
@@ -85,20 +82,20 @@ def run_automation():
     
     os.system('cls' if os.name == 'nt' else 'clear')
     print("="*65)
-    print("  🚀 POPTEST - ACCESS GRANTED  ".center(65))
+    print(" >> POPTEST - ACCESS GRANTED << ".center(65))
     print("="*65)
     print("\n  STEPS TO CONFIGURE:")
-    print("  1.  Navigate to the new Chrome Tab")
-    print("  2.  Click 'Add +', then 'Continue without account'")
-    print("  3.  Label tab with the 'Tel no.' for your login")
-    print("  4.  Login to Gamemania: https://www.gamemania.co.ke/login?isBack=1")
-    print("  5.  Paste link into all other tabs & login")
+    print("  [1]  Navigate to the new Chrome Tab")
+    print("  [2]  Click 'Add +', then 'Continue without account'")
+    print("  [3]  Label tab with the 'Tel no.' for your login")
+    print("  [4]  Login to Gamemania: https://www.gamemania.co.ke/login?isBack=1")
+    print("  [5]  Paste link into all other tabs & login")
     print("-" * 65)
-    print("  [✓] Engage Autoclicker")
-    print("  [✓] Adjust volume accordingly")
+    print("  [X] Engage Autoclicker")
+    print("  [X] Adjust volume accordingly")
     print("-" * 65)
-    print("  💡 STATUS: Monitoring... Minimize window ")
-    print("  📞 Contact Admin: 0725766022")
+    print("  (i) STATUS: Monitoring... Minimize window ")
+    print("  [#] Contact Admin: 0725766022")
     print("\n" + "="*65)
 
     driver = create_driver()
@@ -109,8 +106,9 @@ def run_automation():
         while True:
             if not cleared and (time.time() - start_time) > 180:
                 os.system('cls' if os.name == 'nt' else 'clear')
-                print(f"[{time.strftime('%H:%M:%S')}] 🟢 Script Running. Minimize window.")
-                print("Bonne chasse! 🎯")
+                # Use simple characters for the running status
+                print(f"[{time.strftime('%H:%M:%S')}] (*) Script Running. Minimize window.")
+                print("Bonne chasse! >>")
                 cleared = True
 
             for handle in driver.window_handles:
@@ -119,13 +117,14 @@ def run_automation():
                     if not cleared:
                         os.system('cls' if os.name == 'nt' else 'clear')
                         cleared = True
-                    print(f"[{time.strftime('%H:%M:%S')}] ⚠ Address detected!")
+                    # '!' is the safest alert icon for terminal
+                    print(f"[{time.strftime('%H:%M:%S')}] [!] ALERT: Popup detected!")
                     play_alarm(alarm_file)
             
-            time.sleep(20) # Changed from 60 to 10 for better detection speed
+            time.sleep(20) 
 
     except (WebDriverException, KeyboardInterrupt):
-        print("\nBye Bye...")
+        print("\nExiting script...")
     finally:
         try:
             driver.quit()
@@ -134,11 +133,11 @@ def run_automation():
 
 if __name__ == "__main__":
     os.system('cls' if os.name == 'nt' else 'clear')
-    print("🔐 Validating credentials...")
+    # Using simple brackets for the loading state
+    print("[.] Validating credentials...")
 
-    # Silent initial check
     if not ensure_valid(LICENSE_SERVER_URL):
-        print(" (Note: First connection might take 30-60s to wake up the server)\n")
+        print(" (Note: First run may take a while, please wait...)\n")
         
         max_attempts = 4
         authenticated = False
@@ -154,13 +153,13 @@ if __name__ == "__main__":
                 authenticated = True
                 break
             else:
-                print(f"❌ Authentication failed or Server Timeout.")
+                print(f"[-] Authentication failed!")
                 if attempt < max_attempts:
-                    print(" Please try again (Server may still be waking up).\n")
+                    print(" Please try again.\n")
 
         if not authenticated:
-            print("🚫 Auth Failed... Contact admin: 0725766022")
-            input("\nClick Enter to exit...")
+            print("[!] Auth Failed... Contact admin: 0725766022")
+            input("\nPress Enter to exit...")
             sys.exit(1)
 
     run_automation()
