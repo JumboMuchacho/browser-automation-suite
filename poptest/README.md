@@ -6,12 +6,11 @@ An enterprise-ready automation utility built for real-time monitoring of dynamic
 
 ## 🌟 Key Features
 
-- **Zero-Config Portability:** The application is entirely location-agnostic. Users can rename the `.exe` or move it between drives (e.g., from Downloads to a USB) without losing license status or browser sessions.
-- **Intelligent Multi-Tab Scanning:** Concurrently monitors all open browser handles to detect specific UI changes (popups, modals, alerts) across different session contexts.
-- **Cryptographic Hardware Binding:** Uses machine-specific UUIDs to generate a unique Hardware ID (HID), preventing unauthorized license sharing.
-- **Offline-First Licensing:** Implements a local caching mechanism with signed HMAC-SHA256 tokens, allowing verified users to operate without an internet connection until token expiration.
-- **Session Persistence:** Configured with custom Chrome Data Directories, ensuring user login states and cookies remain intact between application restarts.
-- **Process Guard:** Integrated `psutil` logic to manage system resources and prevent "zombie" Chromium instances from impacting performance.
+- **Multi-Tab Intelligent Scanning:** Unlike standard bots, Poptest iterates through all active window handles, switching context dynamically to detect popups/modals across different sessions.
+- **Persistent User Personas:** Profiles are stored in `~/.popup_detector_profile`. This ensures that even if the `.exe` is moved or renamed, user cookies and login sessions (e.g., GameMania) remain intact.
+- **Bypass Detection:** Implements `AutomationControlled` flags and custom options to mimic human browser behavior and reduce bot-detection triggers.
+- **Smart Resource Management:** Uses `psutil` to identify and terminate "zombie" Chromium processes, ensuring zero resource leakage between application restarts.
+- **Resource Bundling:** Dynamically resolves paths for Chromium binaries and audio assets using `sys._MEIPASS`, allowing for a truly portable, single-file distribution.
 
 ---
 
@@ -26,6 +25,7 @@ The application is split into two primary domains:
 
 ### 2. The Security Layer (license.py)
 - **HMAC Signing:** Uses a shared secret to verify that server responses have not been tampered with.
+- **Hardware ID (HID) Binding:** Generates a unique machine fingerprint based on system UUIDs.
 - **Secure Storage:** Locally stored licenses are Base64 encoded and validated against the system's hardware signature on every launch.
 
 ---
@@ -36,7 +36,7 @@ The application is split into two primary domains:
 .
 ├── main.py              # Application entry point & Automation Logic
 ├── license.py           # Cryptographic validation & Hardware Fingerprinting
-├── main.bat             # Production-ready environment launcher
+├── main.bat             # Production environment launcher
 ├── chrome/              # Portable Chromium binary distribution
 ├── chromedriver/        # Selenium WebDriver binaries
 ├── alarm_sounds/        # Resource directory for audible alerts
@@ -61,7 +61,19 @@ pip install -r requirements.txt
 # Run Application
 python main.py
 ```
+
+## 🛠 Usage & Workflow
+
+### User Instructions
+
+1.  **Authentication:** Upon launch, the application automatically validates your unique Hardware ID (HID). If the device is unauthorized, you will be prompted to enter a valid license key to proceed.
+2.  **Navigation:** Once authenticated, the system initializes a dedicated, portable Chromium instance. You should navigate to the target website, log in to your account, and open as many browser tabs as required for your workflow.
+3.  **Monitoring:** The automation engine runs in the background, automatically cycling through all active browser tabs every **60 seconds** to scan for specific targets.
+4.  **Alerts:** When a designated UI element is detected, the system triggers the `carrousel.wav` alarm to notify you immediately.
+
+
 ---
+
 ### Production Build (PyInstaller)
 The suite is designed to be distributed as a standalone .exe. Run the following command to bundle all resources:
 ```bash
@@ -70,6 +82,7 @@ pyinstaller --onefile --noconsole main.py ^
   --add-data "chrome;chrome" ^
   --add-data "chromedriver;chromedriver"
   ```
+
   ---
  ## 🔒 Security Compliance
  ---

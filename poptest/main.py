@@ -60,7 +60,6 @@ def create_driver():
     chrome_bin = resource_path("chrome/chrome.exe")
     driver_bin = resource_path("chromedriver/chromedriver.exe")
 
-    # Fixed global path for profile ensures renaming the EXE doesn't lose login sessions
     profile = os.path.join(os.path.expanduser("~"), ".popup_detector_profile")
     os.makedirs(profile, exist_ok=True)
 
@@ -77,7 +76,6 @@ def create_driver():
     driver.set_page_load_timeout(60)
     return driver
 
-
 # ------------------------------
 # Execution Loop
 # ------------------------------
@@ -89,35 +87,42 @@ def run_automation():
     
     alarm_file = resource_path("alarm_sounds/carrousel.wav")
     
-    print("🚀 Launching Browser...")
-    print("Navigate to the new Chromium Tab")
-    print("click Add +, continue without account") 
-    print("Label it the Tel no. under the gamemania account you'll be logging into > done")
-    print("Search, enter and login to gamemania")
-    print("Copy link in address bar and paste it to the other tabs you'll have opened and log in")
-    print("All set... Engage autoclicker...")
-    print("Adjust volume accordingly")
-    print("You will be notified if an address lands") 
-    print("Contact admin for any querry")      
+    # Clean UI Implementation
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print("="*65)
+    print("  🚀 POPTEST - ACCESS GRANTED  ".center(65))
+    print("="*65)
+    print("\n  STEPS TO CONFIGURE:")
+    print("  1.  Navigate to the new Chrome Tab")
+    print("  2.  Click 'Add +', then 'Continue without account'")
+    print("  3.  Label tab with the 'Tel no.' for your login")
+    print("  4.  Login to Gamemania after pasting the link in browser https://www.gamemania.co.ke/login?isBack=1")
+    print("  5.  Paste link into all other tabs & login")
+    print("-" * 65)
+    print("  [✓] Engage Autoclicker")
+    print("  [✓] Adjust volume accordingly")
+    print("-" * 65)
+    print("  💡 STATUS: Monitoring... Minimize window ")
+    print("  📞 Contact Admin for queries: 0725766022")
+    print("\n" + "="*65)
 
     driver = create_driver()
     
-    # Timer setup
     start_time = time.time()
     cleared = False
 
     try:
         while True:
-            # Check if 3 minutes (180s) have passed
+            # Clear logic: 180 seconds = 3 minutes
             if not cleared and (time.time() - start_time) > 180:
                 os.system('cls' if os.name == 'nt' else 'clear')
-                print(f"[{time.strftime('%H:%M:%S')}] Don't close this window, minimize rather. Script Running...")
+                print(f"[{time.strftime('%H:%M:%S')}] 🟢 Script Running. Minimize window, do not close.")
+                print("Bonne chasse! 🎯")
                 cleared = True
 
             for handle in driver.window_handles:
                 driver.switch_to.window(handle)
                 if detect_popup(driver, selectors):
-                    # Clear immediately if a popup is found before the 3-minute mark
                     if not cleared:
                         os.system('cls' if os.name == 'nt' else 'clear')
                         cleared = True
@@ -125,7 +130,6 @@ def run_automation():
                     print(f"[{time.strftime('%H:%M:%S')}] ⚠ Address detected!")
                     play_alarm(alarm_file)
             
-            # Sleep in smaller increments so the timer check remains responsive
             time.sleep(10) 
 
     except (WebDriverException, KeyboardInterrupt):
@@ -137,6 +141,7 @@ def run_automation():
             pass
 
 if __name__ == "__main__":
+    os.system('cls' if os.name == 'nt' else 'clear')
     print("🔐 Validating credentials...")
 
     if not ensure_valid(LICENSE_SERVER_URL):
@@ -146,7 +151,7 @@ if __name__ == "__main__":
         authenticated = False
 
         for attempt in range(1, max_attempts + 1):
-            user_key = input(f"Input valid credentials(Attempt {attempt}/{max_attempts}) or 'q' to quit: ").strip()
+            user_key = input(f"Input credentials (Attempt {attempt}/{max_attempts}) or 'q' to quit: ").strip()
 
             if user_key.lower() == 'q' or not user_key:
                 sys.exit(0)
@@ -155,14 +160,13 @@ if __name__ == "__main__":
                 authenticated = True
                 break
             else:
-                print(f"❌ Your authentication is invalid.")
+                print(f"❌ Authentication invalid.")
                 if attempt < max_attempts:
                     print("Please try again.\n")
 
         if not authenticated:
-            print("🚫 Auth Failed... Do contact admin for aid\nTel:0725766022")
+            print("🚫 Auth Failed... Contact admin for aid\nTel: 0725766022")
             input("\nClick Enter to exit...")
             sys.exit(1)
 
-    print("✅ Access Granted.")
     run_automation()
