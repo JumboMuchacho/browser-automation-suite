@@ -77,6 +77,7 @@ def create_driver():
     driver.set_page_load_timeout(60)
     return driver
 
+
 # ------------------------------
 # Execution Loop
 # ------------------------------
@@ -89,19 +90,44 @@ def run_automation():
     alarm_file = resource_path("alarm_sounds/carrousel.wav")
     
     print("🚀 Launching Browser...")
-    print("Please wait...") # Implementation of your previous request
-    print("In the opened Chromium Tab navigate as you would and create profiles and login to gamemania, copy paste the website URL from the browser address bar to the other open tabs log in and start clicking...")
-    print("You will be notified if an address lands, adjust volume accordingly.")       
+    print("Navigate to the new Chromium Tab")
+    print("click Add +, continue without account") 
+    print("Label it the Tel no. under the gamemania account you'll be logging into > done")
+    print("Search, enter and login to gamemania")
+    print("Copy link in address bar and paste it to the other tabs you'll have opened and log in")
+    print("All set... Engage autoclicker...")
+    print("Adjust volume accordingly")
+    print("You will be notified if an address lands") 
+    print("Contact admin for any querry")      
+
     driver = create_driver()
+    
+    # Timer setup
+    start_time = time.time()
+    cleared = False
 
     try:
         while True:
+            # Check if 3 minutes (180s) have passed
+            if not cleared and (time.time() - start_time) > 180:
+                os.system('cls' if os.name == 'nt' else 'clear')
+                print(f"[{time.strftime('%H:%M:%S')}] Don't close this window, minimize rather. Script Running...")
+                cleared = True
+
             for handle in driver.window_handles:
                 driver.switch_to.window(handle)
                 if detect_popup(driver, selectors):
+                    # Clear immediately if a popup is found before the 3-minute mark
+                    if not cleared:
+                        os.system('cls' if os.name == 'nt' else 'clear')
+                        cleared = True
+                        
                     print(f"[{time.strftime('%H:%M:%S')}] ⚠ Address detected!")
                     play_alarm(alarm_file)
-            time.sleep(60)
+            
+            # Sleep in smaller increments so the timer check remains responsive
+            time.sleep(10) 
+
     except (WebDriverException, KeyboardInterrupt):
         print("\nBye Bye...")
     finally:
