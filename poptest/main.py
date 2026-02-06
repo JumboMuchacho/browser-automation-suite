@@ -75,27 +75,39 @@ def create_driver():
 
 def run_automation():
     selectors = [
-        {"type": "css", "value": "#app div.commonModal-wrap div.normal div.message"},
-        {"type": "css", "value": "#app div.commonModal-wrap div.normal div.title"},
+        # 🔔 Error Message (Alarm Trigger)
+        {
+            "type": "xpath",
+            "value": "//div[contains(@class, 'commonModal-wrap')]"
+                     "//div[contains(@class, 'message') and contains(., 'no USDT transaction')]"
+        },
+
+        # 🔁 Try Again Later Button
+        {
+            "type": "xpath",
+            "value": "//div[contains(@class, 'commonModal-wrap')]"
+                     "//div[contains(@class, 'buttonBox')]"
+                     "//div[contains(., 'Try Again Later')]"
+        }
     ]
+
     alarm_file = resource_path("alarm_sounds/carrousel.wav")
-    
+   
     os.system('cls' if os.name == 'nt' else 'clear')
     print("="*65)
     print(" >> POPTEST - ACCESS GRANTED << ".center(65))
     print("="*65)
     print("\n  STEPS TO CONFIGURE:")
-    print("  [1]  Navigate to the new Chrome Tab")
-    print("  [2]  Click 'Add +', then 'Continue without account'")
-    print("  [3]  Label tab with the 'Tel no.' for your login")
-    print("  [4]  Login to Gamemania: https://www.gamemania.co.ke/login?isBack=1")
-    print("  [5]  Paste link into all other tabs & login")
+    print("  [1]  Click 'Add +' then 'continue without account'")
+    print("  [1]  Your created accounts will be there next time you visit")
+    print("  [2]  Log into the website and navigate to submit page")
+    print("  [3]  A notification will sound when deposit address lands")
     print("-" * 65)
     print("  [X] Engage Autoclicker")
-    print("  [X] Adjust volume accordingly")
+    print("  [X] Adjust volume!")
     print("-" * 65)
-    print("  (i) STATUS: Monitoring... Minimize window ")
-    print("  [#] Contact Admin: 0725766022")
+    print("  (i) STATUS: Monitoring...")
+    print("  [#] For support, Whatsapp: +254725766022")
     print("\n" + "="*65)
 
     driver = create_driver()
@@ -107,8 +119,9 @@ def run_automation():
             if not cleared and (time.time() - start_time) > 180:
                 os.system('cls' if os.name == 'nt' else 'clear')
                 # Use simple characters for the running status
-                print(f"[{time.strftime('%H:%M:%S')}] (*) Script Running. Minimize window.")
+                print(f"[{time.strftime('%H:%M:%S')}] (*) SCRIPT RUNNING...\nClosing this window will terminate it!\nYou may minimize this window and proceed.")
                 print("Bonne chasse! >>")
+                print("Happy Hunting! >>")
                 cleared = True
 
             for handle in driver.window_handles:
