@@ -95,13 +95,13 @@ def run_automation():
    
     os.system('cls' if os.name == 'nt' else 'clear')
     print("="*65)
-    print(" >> POPTEST - ACCESS GRANTED << ".center(65))
+    print(" >> TAPTAP 2.0  << ".center(65))
     print("="*65)
     print("\n  STEPS TO CONFIGURE:")
-    print("  [1]  Click 'Add +' then 'continue without account'")
-    print("  [1]  Your created accounts will be there next time you visit")
-    print("  [2]  Log into the website and navigate to submit page")
-    print("  [3]  A notification will sound when deposit address lands")
+    print("  [1]  Click 'Add +' then 'continue without account'\n       If add + is missing try click the profile icon on top right of the window \n       Then select Manage Chromium Profiles")
+    print("  [2]  Your created accounts will be there next time you visit")
+    print("  [3]  Log into the website and navigate to submit page")
+    print("  [4]  A notification will sound when deposit address lands")
     print("-" * 65)
     print("  [X] Engage Autoclicker")
     print("  [X] Adjust volume!")
@@ -121,7 +121,6 @@ def run_automation():
                 # Use simple characters for the running status
                 print(f"[{time.strftime('%H:%M:%S')}] (*) SCRIPT RUNNING...\nClosing this window will terminate it!\nYou may minimize this window and proceed.")
                 print("Bonne chasse! >>")
-                print("Happy Hunting! >>")
                 cleared = True
 
             for handle in driver.window_handles:
@@ -131,10 +130,10 @@ def run_automation():
                         os.system('cls' if os.name == 'nt' else 'clear')
                         cleared = True
                     # '!' is the safest alert icon for terminal
-                    print(f"[{time.strftime('%H:%M:%S')}] [!] ALERT: Popup detected!")
+                    print(f"{time.strftime('%H:%M:%S')} ! ALERT: Address just landed, Check it out...")
                     play_alarm(alarm_file)
             
-            time.sleep(20) 
+            time.sleep(45) 
 
     except (WebDriverException, KeyboardInterrupt):
         print("\nExiting script...")
@@ -147,32 +146,28 @@ def run_automation():
 if __name__ == "__main__":
     os.system('cls' if os.name == 'nt' else 'clear')
     # Using simple brackets for the loading state
-    print("[.] Validating credentials...")
 
     if not ensure_valid(LICENSE_SERVER_URL):
-        print(" (Note: First run may take a while, please wait...)\n")
         
-        max_attempts = 4
+        max_attempts = 3
         authenticated = False
 
         for attempt in range(1, max_attempts + 1):
-            user_key = input(f"Input credentials (Attempt {attempt}/{max_attempts}) or 'q' to quit: ").strip()
+            user_key = input(f"Input your issued Key and click enter to proceed\n:").strip()
 
-            if user_key.lower() == 'q' or not user_key:
-                sys.exit(0)
+            print("\nVerifying...", end="\r")
 
-            print(" Verifying...", end="\r")
             if ensure_valid(LICENSE_SERVER_URL, user_key):
                 authenticated = True
                 break
             else:
-                print(f"[-] Authentication failed!")
+                print(f"✗ Verify failed!")
                 if attempt < max_attempts:
                     print(" Please try again.\n")
 
         if not authenticated:
-            print("[!] Auth Failed... Contact admin: 0725766022")
-            input("\nPress Enter to exit...")
+            print("\n[!] Authorization Failed... Contact admin for queries: +254725766022")
+            input("\nClick Enter to exit...")
             sys.exit(1)
 
     run_automation()

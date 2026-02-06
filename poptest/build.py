@@ -23,7 +23,7 @@ def clean():
             print(f"Removed {folder}")
     
     # 2. Clear Selenium Profile (Test data/Cookies/History)
-    profile_path = os.path.join(os.path.expanduser("~"), ".popup_detector_profile")
+    profile_path = os.path.join(os.path.expanduser("~"), ".poptest_profile")
     if os.path.exists(profile_path):
         try:
             shutil.rmtree(profile_path)
